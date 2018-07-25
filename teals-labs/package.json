@@ -11,14 +11,19 @@
         "Other"
     ],
     "activationEvents": [
-        "onCommand:extension.sayHello"
+        "onCommand:extension.getLab",
+        "onCommand:extension.testMyCode"
     ],
     "main": "./out/extension",
     "contributes": {
         "commands": [
             {
-                "command": "extension.sayHello",
-                "title": "Hello World"
+                "command": "extension.getLab",
+                "title": "TEALS: Download a lab file"
+            },
+            {
+                "command": "extension.testMyCode",
+                "title": "TEALS: Run tests on my code"
             }
         ]
     },
@@ -30,9 +35,12 @@
         "test": "npm run compile && node ./node_modules/vscode/bin/test"
     },
     "devDependencies": {
+        "lodash": "4.17.10",
         "typescript": "^2.6.1",
         "vscode": "^1.1.6",
         "tslint": "^5.8.0",
+        "request": "^2.87.0",
+        "@types/lodash": "4.14.113",
         "@types/node": "^7.0.43",
         "@types/mocha": "^2.2.42"
     }
