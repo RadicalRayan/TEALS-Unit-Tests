@@ -17,7 +17,7 @@ class UnitTests(unittest.TestCase):
     #arguments passing in
     def test_birthday_song(self):
         song = 'happy birthday to you, happy birthday to you, happy birthday dear TEALS, happy birthday to you'
-        self.assertAlmostEqual(studentFile.birthday_song('TEALS'), song)
+        self.assertEqual(studentFile.birthday_song('TEALS'), song)
 
     #printing
     @patch('sys.stdout.write')
