@@ -20,6 +20,17 @@ enum Labs {
   Lab03 = "Lab03"
 }
 
+enum Result {
+  ok = "ok",
+  FAIL = "FAIL",
+  ERROR = "ERROR" // TODO: Verify....
+}
+
+interface ITestResult {
+  name: string;
+  result: Result;
+}
+
 interface ILab {
   student: string;
   test: string;
@@ -147,53 +158,78 @@ function testMyCode(name: string) {
     const testFileName =
       LabLookup[path.basename(filePath, path.extname(filePath))].test;
     let downloadFilePath = path.join(vscode.workspace.rootPath, testFileName);
-    const thing: vscode.OutputChannel = vscode.window.createOutputChannel(
-      "TEALS Tests"
+    const panel: vscode.WebviewPanel = vscode.window.createWebviewPanel(
+      "testTEALS",
+      "TEALS Tests",
+      vscode.ViewColumn.One,
+      {}
     );
-    thing.appendLine("We're attempting to run the tests...");
-    thing.show(false);
+    const updateWebview = (isRunning: boolean, items: ITestResult[]) => {
+      const thing = getWebviewContent(isRunning, items);
+      panel.webview.html = thing;
+    };
+    panel.reveal();
+    let text = "";
+    let isRunning = true;
+    text += "We're attempting to run the tests...";
+    updateWebview(isRunning, []);
     download(testFileName, downloadFilePath)
       .then((updatedFilePath: string) => {
         console.log("Successful download!");
         // Run the test code with the current open file...
         exec(
-          `python "${updatedFilePath}"`,
+          `python "${updatedFilePath}" --verbose`,
           (err: any, stdout: any, stderr: any) => {
-            if (err) {
-              console.error(err);
-              console.error(stderr);
-              const resultLine = stderr.split("\n")[0];
-              const numFailures = resultLine.match(/F/g).length;
-              const numTestsRan = resultLine.length - 1; // Account for carriage return \r
-              if (numFailures > 0) {
-                thing.appendLine("Uh Oh!");
-                thing.appendLine("Looks like you have some failures here...");
-                thing.appendLine(
-                  numFailures +
-                    " of our tests failed. Please look at your code again."
-                );
-                thing.appendLine(
-                  "Consider edge cases and make sure the program runs with the base cases."
-                );
-                vscode.window.showInformationMessage(
-                  `Bad news... You got ${numFailures} out of ${numTestsRan} incorrect. Please look for edge cases and general running.`
-                );
-                testCleanup(updatedFilePath);
-                return;
-              }
-            }
-            thing.appendLine("Successful test!");
-            thing.appendLine(
-              "Congrats! Looks like your code will get a full 'Functionality' points."
-            );
-            thing.appendLine(
-              "Remember to add comments and clean up your code to ensure you get full credit for the lab."
-            );
-            console.log("Successful test!");
-            console.log(stdout);
-            vscode.window.showInformationMessage(
-              "Congrats! Looks like your code will get full 'Functionality' points. Remember to add comments and clean it up before submitting!"
-            );
+            isRunning = false;
+            const items: ITestResult[] = stderr
+              .split("\n")
+              .filter((line: string) => line.startsWith("test_"))
+              .map((testLine: string) => {
+                const splitted: string[] = testLine.split(" ");
+                return {
+                  name: splitted[0],
+                  result: Result[splitted[3].trim() as any]
+                };
+              });
+            // if (err) {
+            //   console.error(err);
+            //   console.error(stderr);
+
+            //   const failedTestNames = stderr.split("\n").filter((line: string) => { return line.startsWith("FAIL: test_");}).map((line: string) => { return line.split(" ")[1] });
+            //   const resultLine = stderr.split("\n")[0];
+            //   const numFailures = resultLine.match(/F/g).length;
+            //   const numTestsRan = resultLine.length - 1; // Account for carriage return \r
+            //   if (numFailures > 0) {
+            //     text="";
+            //     text+=("Uh Oh!");
+            //     text+=("Looks like you have some failures here...");
+            //     text+=(
+            //       numFailures +
+            //         " of our tests failed. Please look at your code again."
+            //     );
+            //     text+=(
+            //       "Consider edge cases and make sure the program runs with the base cases."
+            //     );
+            //     updateWebview(isRunning, numFailures, numTestsRan, text);
+            //     vscode.window.showInformationMessage(
+            //       `Bad news... You got ${numFailures} out of ${numTestsRan} incorrect. Please look for edge cases and general running.`
+            //     );
+            //     testCleanup(updatedFilePath);
+            //     return;
+            //   }
+            // }
+            // text+=("Successful test!");
+            // text+=(
+            //   "Congrats! Looks like your code will get a full 'Functionality' points."
+            // );
+            // text+=(
+            //   "Remember to add comments and clean up your code to ensure you get full credit for the lab."
+            // );
+            updateWebview(isRunning, items);
+            console.log("Successfully ran test!");
+            // vscode.window.showInformationMessage(
+            //   "Congrats! Looks like your code will get full 'Functionality' points. Remember to add comments and clean it up before submitting!"
+            // );
 
             testCleanup(updatedFilePath);
           }
@@ -206,6 +242,33 @@ function testMyCode(name: string) {
         );
       });
   }
+}
+
+function getWebviewContent(isRunning: boolean, items: ITestResult[]) {
+  return `<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Coding</title>
+</head>
+<body>
+<table id="mytable">
+<tbody>
+<tr><td>Pass?</td><td>Test name</td><td>Result</td></tr>
+${items.map((item: ITestResult) => {
+    return `<tr id="${item.result}"><td>${
+      item.result === Result.ok
+        ? "❎"
+        : item.result === Result.FAIL
+          ? "❌"
+          : "⚠"
+    }</td>  <td>${item.name}</td><td>${item.result}</td> </tr>`;
+  })}
+</tbody>
+</table>    
+
+</body>
+</html>`;
 }
 
 function testCleanup(filePath: string): void {
