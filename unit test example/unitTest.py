@@ -7,6 +7,9 @@ import random
 from unittest.mock import patch
 
 class UnitTests(unittest.TestCase):
+    def setUp(self):
+        self.incrementingValue = 0
+
     #random
     @patch("random.randint")
     def test_cards(self, mockRandInt):
@@ -25,6 +28,20 @@ class UnitTests(unittest.TestCase):
         studentFile.hello_world()
         mock_print.assert_called();
         mock_print.assert_any_call('Hello World')
+    
+    def side_effect(self, value):
+        self.incrementingValue = 1 + self.incrementingValue
+        return str(self.incrementingValue)
+
+    # input
+    @patch("sys.stdout.write")
+    def test_input(self, mock_print):
+        with patch('builtins.input', side_effect=self.side_effect):
+            studentFile.magicGenie() 
+        args, kwargs = mock_print.call_args_list[2]
+        print(mock_print.call_args)
+        mock_print.assert_any_call("Your wishes are 1, 2 and 3")
+
 
 if __name__ == '__main__':
     unittest.main() 
