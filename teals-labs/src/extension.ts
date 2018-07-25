@@ -18,7 +18,8 @@ const baseUrl =
 enum Labs {
   Lab01 = "Lab01",
   Lab02 = "Lab02",
-  Lab03 = "Lab03"
+  Lab03 = "Lab03",
+  Lab4_01 = "Lab4_01",
 }
 
 enum Result {
@@ -41,7 +42,8 @@ interface ILab {
 const LabLookup: _.Dictionary<ILab> = {
   [Labs.Lab01]: { student: "Lab01.py", test: "Lab01.test.py" },
   [Labs.Lab02]: { student: "Lab02.py", test: "Lab02.test.py" },
-  [Labs.Lab03]: { student: "Lab03.py", test: "Lab03.test.py" }
+  [Labs.Lab03]: { student: "Lab03.py", test: "Lab03.test.py" },
+  [Labs.Lab4_01]: { student: "Lab4_01.py", test: "Lab4_01_test.py" },
 };
 
 // this method is called when your extension is activated
@@ -74,7 +76,8 @@ function getLab() {
     .showQuickPick(
       Object.keys(Labs).filter(item => {
         return isNaN(Number(item));
-      })
+      }),
+      { placeHolder: "Choose a lab to download" }
     )
     .then((name: string | undefined) => {
       if (!isUndefined(name)) {
@@ -132,7 +135,7 @@ function downloadAndOpen(name: string, filePath: string) {
     })
     .catch(statusCode => {
       vscode.window.showErrorMessage(
-        `Unable to download ${name}. (statusCode: ${statusCode})`
+        `Unable to download ${name} (statusCode: ${statusCode}).`
       );
     });
 }
