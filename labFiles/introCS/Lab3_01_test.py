@@ -5,12 +5,11 @@ import contextlib
 import sys
 import io
 import random
+import Lab3_01
 from unittest.mock import patch
 
 
 class UnitTests(unittest.TestCase):
-    def testOutput(output):
-        assert(output in ["Outlook is good", "Ask again later", "Yes", "No", "Most likely no", "Most likely yes", "Maybe", "Outlook is not good"])
 
     # Testing that function never outputs anything outside of acceptable values
     def test_correct_outputs(self):
@@ -20,7 +19,8 @@ class UnitTests(unittest.TestCase):
                 sys.stdout = io.StringIO()
                 Lab3_01.magic8ball()
                 output = sys.stdout.getvalue().strip()
-                testOutput(output)
+                assert(output in ["Outlook is good", "Ask again later", "Yes", 
+                    "No", "Most likely no", "Most likely yes", "Maybe", "Outlook is not good"])
         finally:
             sys.stdout = saved_stdout
 
@@ -28,8 +28,11 @@ class UnitTests(unittest.TestCase):
     @patch("random.randint")
     def test_cards(self, mockRandInt):
         mockRandInt.return_value = 0
-        result = Lab3_01.magic8ball()
-        self.assertEqual(result, "Outlook is good")
+        saved_stdout = sys.stdout
+        sys.stdout = io.StringIO()
+        Lab3_01.magic8ball()
+        output = sys.stdout.getvalue().strip()
+        self.assertEqual(output, "Outlook is good")
 
 if __name__ == '__main__':
     unittest.main() 
