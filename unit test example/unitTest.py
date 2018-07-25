@@ -5,8 +5,6 @@ import sys
 import io
 import random
 from unittest.mock import patch
-import xmlrunner
-
 
 class UnitTests(unittest.TestCase):
     #random
@@ -29,8 +27,4 @@ class UnitTests(unittest.TestCase):
         mock_print.assert_any_call('Hello World')
 
 if __name__ == '__main__':
-    unittest.main(
-        testRunner=xmlrunner.XMLTestRunner(output='test-reports'),
-        # these make sure that some options that are not applicable
-        # remain hidden from the help menu.
-        failfast=False, buffer=False, catchbreak=False)
+    unittest.main() 

@@ -5,7 +5,6 @@ import sys
 import io
 import random
 from unittest.mock import patch
-import xmlrunner  # pip install unittest-xml-reporting
 
 
 class UnitTests(unittest.TestCase):
@@ -30,7 +29,4 @@ class UnitTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    with open('results.xml', 'wb') as output:
-        unittest.main(
-            testRunner=xmlrunner.XMLTestRunner(output=output),
-            failfast=False, buffer=False, catchbreak=False)
+    unittest.main() 
