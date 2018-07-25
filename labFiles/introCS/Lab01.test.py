@@ -23,6 +23,9 @@ class UnitTests(unittest.TestCase):
     # printing
     @patch('sys.stdout.write')
     def test_hello_world(self, mock_print):
+        """
+        Test printing out to the screen.
+        """
         Lab01.hello_world()
         mock_print.assert_called()
         mock_print.assert_any_call('Hello World')
