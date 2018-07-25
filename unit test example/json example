@@ -1,0 +1,108 @@
+from __future__ import print_function
+import studentFile
+from unittest import (
+    mock,
+    TestCase,
+    TestLoader,
+    TextTestResult,
+    TextTestRunner)
+import sys
+import io
+import os
+from pprint import pprint
+import random
+from unittest.mock import patch
+
+OK = 'ok'
+FAIL = 'fail'
+ERROR = 'error'
+SKIP = 'skip'
+
+
+class JsonTestResult(TextTestResult):
+
+    def __init__(self, stream, descriptions, verbosity):
+        super_class = super(JsonTestResult, self)
+        super_class.__init__(stream, descriptions, verbosity)
+
+        # TextTestResult has no successes attr
+        self.successes = []
+
+    def addSuccess(self, test):
+        # addSuccess do nothing, so we need to overwrite it.
+        super(JsonTestResult, self).addSuccess(test)
+        self.successes.append(test)
+
+    def json_append(self, test, result, out):
+        suite = test.__class__.__name__
+        if suite not in out:
+            out[suite] = {OK: [], FAIL: [], ERROR: [], SKIP: []}
+        if result is OK:
+            out[suite][OK].append(test._testMethodName)
+        elif result is FAIL:
+            out[suite][FAIL].append(test._testMethodName)
+            out[suite][FAIL].append(str(test.failureException))
+        elif result is ERROR:
+            out[suite][ERROR].append(test._testMethodName)
+        elif result is SKIP:
+            out[suite][SKIP].append(test._testMethodName)
+        else:
+            raise KeyError("No such result: {}".format(result))
+        return out
+
+    def jsonify(self):
+        json_out = dict()
+        for t in self.successes:
+            json_out = self.json_append(t, OK, json_out)
+
+        for t, _ in self.failures:
+            json_out = self.json_append(t, FAIL, json_out)
+
+        for t, _ in self.errors:
+            json_out = self.json_append(t, ERROR, json_out)
+
+        for t, _ in self.skipped:
+            json_out = self.json_append(t, SKIP, json_out)
+
+        return json_out
+
+
+class UnitTests(TestCase):
+    # random
+    @patch("random.randint")
+    def test_cards(self, mockRandInt):
+        mockRandInt.return_value = 1
+        result = studentFile.cards()
+        self.assertEqual(result, "2 Clubs")
+
+    # arguments passing in
+    def test_birthday_song(self):
+        song = 'happy birthday to you, happy birthday to you, happy birthday dear TEALS, happy birthday to you'
+        self.assertAlmostEqual(studentFile.birthday_song('TEALS'), song)
+
+    # printing
+    @patch('sys.stdout.write')
+    def test_hello_world(self, mock_print):
+        studentFile.hello_world()
+        res = mock_print.assert_any_call('Hello World', "You should be printing out Hello World")
+        print("Hi " + res)
+        if res:
+            raise Exception("Nooooooooooooo")
+
+
+if __name__ == '__main__':
+
+    # redirector default output of unittest to /dev/null
+    with open(os.devnull, 'w') as null_stream:
+        # new a runner and overwrite resultclass of runner
+        runner = TextTestRunner(stream=null_stream)
+        runner.resultclass = JsonTestResult
+
+        # create a testsuite
+        suite = TestLoader().loadTestsFromTestCase(UnitTests)
+
+        # run the testsuite
+        result = runner.run(suite)
+
+        # print json output
+        pprint(result.jsonify())
