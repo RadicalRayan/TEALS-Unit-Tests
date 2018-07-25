@@ -10,6 +10,7 @@ let request = require("request");
 let fs = require("fs");
 let path = require("path");
 
+// TODO: Fix the base urls, we'll have two that are used, one for tests, and one for the starting lab.
 const baseUrl =
   "https://raw.githubusercontent.com/RadicalRayan/TEALS-Unit-Tests/master/labFiles/introCS";
 
@@ -36,6 +37,7 @@ interface ILab {
   test: string;
 }
 
+// TODO: Add a "friendly name" attribute and show that + the lab name.
 const LabLookup: _.Dictionary<ILab> = {
   [Labs.Lab01]: { student: "Lab01.py", test: "Lab01.test.py" },
   [Labs.Lab02]: { student: "Lab02.py", test: "Lab02.test.py" },
@@ -45,10 +47,6 @@ const LabLookup: _.Dictionary<ILab> = {
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
-  // Use the console to output diagnostic information (console.log) and errors (console.error)
-  // This line of code will only be executed once when your extension is activated
-  console.log('Congratulations, your extension "teals-labs" is now active!');
-
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with  registerCommand
   // The commandId parameter must match the command field in package.json
@@ -139,20 +137,11 @@ function downloadAndOpen(name: string, filePath: string) {
     });
 }
 
-// function getStudentVersion(lab: Labs): string {
-//     return lab + ".py";
-// }
-
-// function getTestVersion(lab: Labs): string {
-//     return lab + "test.py";
-// }
-
 function testMyCode(name: string) {
   vscode.window.showInformationMessage("Starting test!");
   console.log("Starting download and test...");
-  // We could check if the test already exists...
   // Download the test file to a temp directory.
-
+  // TODO: Actually download to a temp directory... VS Code doesn't have permission to acccess %TEMP%. We could maybe make a private directory ".test" and copy both files there for a run?
   if (vscode.window.activeTextEditor) {
     const filePath = vscode.window.activeTextEditor.document.fileName;
     const testFileName =
@@ -164,15 +153,12 @@ function testMyCode(name: string) {
       vscode.ViewColumn.One,
       {}
     );
-    const updateWebview = (isRunning: boolean, items: ITestResult[]) => {
-      const thing = getWebviewContent(isRunning, items);
-      panel.webview.html = thing;
+    const updateWebview = (items: ITestResult[] = []) => {
+      panel.webview.html = getWebviewContent(items);
     };
     panel.reveal();
-    let text = "";
-    let isRunning = true;
-    text += "We're attempting to run the tests...";
-    updateWebview(isRunning, []);
+    updateWebview();
+    // TODO: Check if the file the user has opened is an expected / allowable file (ie: Has a cooresponding test file)
     download(testFileName, downloadFilePath)
       .then((updatedFilePath: string) => {
         console.log("Successful download!");
@@ -180,57 +166,18 @@ function testMyCode(name: string) {
         exec(
           `python "${updatedFilePath}" --verbose`,
           (err: any, stdout: any, stderr: any) => {
-            isRunning = false;
             const items: ITestResult[] = stderr
               .split("\n")
               .filter((line: string) => line.startsWith("test_"))
               .map((testLine: string) => {
                 const splitted: string[] = testLine.split(" ");
                 return {
-                  name: splitted[0],
-                  result: Result[splitted[3].trim() as any]
+                  name: splitted[0], // 0 index for name
+                  result: Result[splitted[3].trim() as any] // 3 index for result
                 };
               });
-            // if (err) {
-            //   console.error(err);
-            //   console.error(stderr);
-
-            //   const failedTestNames = stderr.split("\n").filter((line: string) => { return line.startsWith("FAIL: test_");}).map((line: string) => { return line.split(" ")[1] });
-            //   const resultLine = stderr.split("\n")[0];
-            //   const numFailures = resultLine.match(/F/g).length;
-            //   const numTestsRan = resultLine.length - 1; // Account for carriage return \r
-            //   if (numFailures > 0) {
-            //     text="";
-            //     text+=("Uh Oh!");
-            //     text+=("Looks like you have some failures here...");
-            //     text+=(
-            //       numFailures +
-            //         " of our tests failed. Please look at your code again."
-            //     );
-            //     text+=(
-            //       "Consider edge cases and make sure the program runs with the base cases."
-            //     );
-            //     updateWebview(isRunning, numFailures, numTestsRan, text);
-            //     vscode.window.showInformationMessage(
-            //       `Bad news... You got ${numFailures} out of ${numTestsRan} incorrect. Please look for edge cases and general running.`
-            //     );
-            //     testCleanup(updatedFilePath);
-            //     return;
-            //   }
-            // }
-            // text+=("Successful test!");
-            // text+=(
-            //   "Congrats! Looks like your code will get a full 'Functionality' points."
-            // );
-            // text+=(
-            //   "Remember to add comments and clean up your code to ensure you get full credit for the lab."
-            // );
-            updateWebview(isRunning, items);
+            updateWebview(items);
             console.log("Successfully ran test!");
-            // vscode.window.showInformationMessage(
-            //   "Congrats! Looks like your code will get full 'Functionality' points. Remember to add comments and clean it up before submitting!"
-            // );
-
             testCleanup(updatedFilePath);
           }
         );
@@ -244,31 +191,46 @@ function testMyCode(name: string) {
   }
 }
 
-function getWebviewContent(isRunning: boolean, items: ITestResult[]) {
+function getWebviewContent(items: ITestResult[]) {
   return `<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cat Coding</title>
+    <title>TEALS Autograding Test</title>
 </head>
 <body>
 <table id="mytable">
 <tbody>
 <tr><td>Pass?</td><td>Test name</td><td>Result</td></tr>
 ${items.map((item: ITestResult) => {
-    return `<tr id="${item.result}"><td>${
-      item.result === Result.ok
-        ? "❎"
-        : item.result === Result.FAIL
-          ? "❌"
-          : "⚠"
-    }</td>  <td>${item.name}</td><td>${item.result}</td> </tr>`;
+    return `<tr style="background-color:${resultToColor(item.result)}"><td>${resultToIcon(
+      item.result
+    )}</td>  <td>${item.name}</td><td>${item.result}</td> </tr>`;
   })}
 </tbody>
 </table>    
-
 </body>
 </html>`;
+}
+
+function resultToIcon(result: Result): string {
+  if (result === Result.FAIL) {
+    return "❌";
+  } else if (result === Result.ERROR) {
+    return "⚠";
+  } else {
+    return "❎";
+  }
+}
+
+function resultToColor(result: Result): string {
+  if (result === Result.FAIL) {
+    return "#C62828";
+  } else if (result === Result.ERROR) {
+    return "#F9A825";
+  } else {
+    return "#2E7D32";
+  }
 }
 
 function testCleanup(filePath: string): void {
