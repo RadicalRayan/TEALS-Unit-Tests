@@ -137,43 +137,81 @@ function downloadAndOpen(name: string, filePath: string) {
 // }
 
 function testMyCode(name: string) {
-  vscode.window.showInformationMessage("Hello World!");
+  vscode.window.showInformationMessage("Starting test!");
+  console.log("Starting download and test...");
   // We could check if the test already exists...
   // Download the test file to a temp directory.
 
   if (vscode.window.activeTextEditor) {
     const filePath = vscode.window.activeTextEditor.document.fileName;
-    const testFileName = LabLookup[path.basename(filePath, path.extname(filePath))].test;
-    let downloadFilePath = path.join(
-      vscode.workspace.rootPath,
-      testFileName
+    const testFileName =
+      LabLookup[path.basename(filePath, path.extname(filePath))].test;
+    let downloadFilePath = path.join(vscode.workspace.rootPath, testFileName);
+    const thing: vscode.OutputChannel = vscode.window.createOutputChannel(
+      "TEALS Tests"
     );
-    download(
-      testFileName,
-      downloadFilePath
-    )
+    thing.appendLine("We're attempting to run the tests...");
+    thing.show(false);
+    download(testFileName, downloadFilePath)
       .then((updatedFilePath: string) => {
+        console.log("Successful download!");
         // Run the test code with the current open file...
-        exec(`python "${updatedFilePath}"`, (err: any, stdout: any, stderr: any) => {
-          if (err) {
-            const resultLine = stderr.split("\n")[0]
-            const numFailures = resultLine.match(/F/g).length;
-            const numTestsRan = resultLine.length - 1; // Account for carriage return \r
-            vscode.window.showInformationMessage(`Bad news... You got ${numFailures} out of ${numTestsRan} incorrect. Please look for edge cases and general running.`);
-          } else {
-              vscode.window.showInformationMessage("Congrats! Looks like your code will get full 'Functionality' points. Remember to add comments and clean it up before submitting!");
-          }
+        exec(
+          `python "${updatedFilePath}"`,
+          (err: any, stdout: any, stderr: any) => {
+            if (err) {
+              console.error(err);
+              console.error(stderr);
+              const resultLine = stderr.split("\n")[0];
+              const numFailures = resultLine.match(/F/g).length;
+              const numTestsRan = resultLine.length - 1; // Account for carriage return \r
+              if (numFailures > 0) {
+                thing.appendLine("Uh Oh!");
+                thing.appendLine("Looks like you have some failures here...");
+                thing.appendLine(
+                  numFailures +
+                    " of our tests failed. Please look at your code again."
+                );
+                thing.appendLine(
+                  "Consider edge cases and make sure the program runs with the base cases."
+                );
+                vscode.window.showInformationMessage(
+                  `Bad news... You got ${numFailures} out of ${numTestsRan} incorrect. Please look for edge cases and general running.`
+                );
+                testCleanup(updatedFilePath);
+                return;
+              }
+            }
+            thing.appendLine("Successful test!");
+            thing.appendLine(
+              "Congrats! Looks like your code will get a full 'Functionality' points."
+            );
+            thing.appendLine(
+              "Remember to add comments and clean up your code to ensure you get full credit for the lab."
+            );
+            console.log("Successful test!");
+            console.log(stdout);
+            vscode.window.showInformationMessage(
+              "Congrats! Looks like your code will get full 'Functionality' points. Remember to add comments and clean it up before submitting!"
+            );
 
-          // Delete the downloaded file...
-          fs.unlink(updatedFilePath);
-        });
+            testCleanup(updatedFilePath);
+          }
+        );
       })
       .catch(() => {
+        console.error("Couldn't download test file...");
         vscode.window.showErrorMessage(
           `Unable to validate your test due to connectivity issues. Please talk to an instructor.`
         );
       });
   }
+}
+
+function testCleanup(filePath: string): void {
+  // Delete the downloaded file...
+  console.log("Deleting file...");
+  fs.unlink(filePath);
 }
 
 // this method is called when your extension is deactivated
